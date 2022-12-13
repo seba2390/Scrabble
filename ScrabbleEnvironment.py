@@ -6,6 +6,7 @@ class Scrabble:
 
         self.seed = seed
         np.random.seed(self.seed)
+        self.display_gameplay = display_gameplay
 
         self.screen_color = (0, 0, 0)  # white in RGB
         self.display_gameplay = display_gameplay
@@ -13,10 +14,11 @@ class Scrabble:
         self.grid_size = self.rows, self.columns = 15, 15
         self.cell_size = self.screen_width / self.rows
 
-        self.clock = pygame.time.Clock()
-        self.fps = 100
-        self.window_surface = pygame.display.set_mode(size=self.screen_size,
-                                                      flags=pygame.DOUBLEBUF)
+        if self.display_gameplay:
+            self.clock = pygame.time.Clock()
+            self.fps = 60
+            self.window_surface = pygame.display.set_mode(size=self.screen_size,
+                                                          flags=pygame.DOUBLEBUF)
 
         self.board = Board(nr_rows=self.rows,
                            nr_cols=self.columns,
@@ -33,7 +35,8 @@ class Scrabble:
             for _col in range(self.columns):
                 pygame.draw.rect(surface=self.window_surface,
                                  color=self.board.grid[_row][_col].color,
-                                 rect=self.board.grid[_row][_col].rect)
+                                 rect=self.board.grid[_row][_col].rect,
+                                 width=2)
         pygame.display.update()
         self.clock.tick(self.fps)
 
@@ -41,7 +44,7 @@ class Scrabble:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.is_running = False
-                raise SystemExit
+                #raise SystemExit
 
     def get_state(self):
         pass
