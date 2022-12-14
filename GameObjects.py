@@ -6,6 +6,8 @@ import numpy as np
 
 from Settings import *
 
+# TODO: Fix problem with button is_pressed() gives multiple responses
+
 class PygameText:
     def __init__(self, text: str,
                  text_size: int,
@@ -24,6 +26,52 @@ class PygameText:
         self.text_rect = self.text_surface.get_rect()
 
         self.text_rect.centerx, self.text_rect.centery = center_x, center_y
+
+
+class PygameButton:
+    def __init__(self, LU_anchor: Tuple[int, int],  # Pixel coordinate for upper left corner
+                 width: int,
+                 height: int,
+                 text: str = None,
+                 text_size: int = 15,
+                 text_color: Tuple[int, int, int] = (255, 255, 255)) -> None:
+        self.left, self.top = LU_anchor
+        self.width, self.height = width, height
+
+        self._unpressed_color = (120, 120, 120)
+        self._pressed_color = (145, 145, 145)
+        self.color = self._unpressed_color
+
+        if text is not None:
+            self.text_color = text_color
+            self.text_size = text_size
+            self.text = PygameText(text=text,
+                                   text_size=self.text_size,
+                                   text_color=self.text_color,
+                                   center_x=self.left + self.width // 2,
+                                   center_y=self.top + self.height // 2)
+        self._initialize()
+
+    def _initialize(self):
+        # Setting pygame rectangle
+        self.rect = pygame.Rect(0, 0, self.width, self.height)
+        self.rect.left, self.rect.top = self.left, self.top
+
+    def is_pressed(self):
+        mouse_position = pygame.mouse.get_pos()
+        # Within x-range
+        if self.rect.left <= mouse_position[0] <= self.rect.right:
+            # Within y-range
+            if self.rect.top <= mouse_position[1] <= self.rect.bottom:
+                self.color = self._pressed_color
+                left, middle, right = pygame.mouse.get_pressed()
+                # Left mouse-button pressed
+                if left:
+                    return True
+
+        else:
+            self.color = self._unpressed_color
+            return False
 
 
 class Cell:
@@ -136,13 +184,12 @@ class Hand:
                  LU_anchor: Tuple[int, int] = (0, 600),  # Placement of left upper (LU) corner on screen.
                  background_width: int = 600,
                  background_height: int = 200) -> None:
-
         self.background_width = background_width
         self.background_height = background_height
         self.background_left, self.background_top = LU_anchor
         self.background_color = (0, 0, 0)
         self.background_rect = None
-        self.top_buffer = 5 # Distance between top of hand background and top of hand cells
+        self.top_buffer = 5  # Distance between top of hand background and top of hand cells
 
         self.cell_size = 50
         self.text_size = 20
@@ -168,10 +215,10 @@ class Hand:
                                   edge_color=(255, 255, 255))
                              for _ in range(self.hand_size)]
         # Setting text objects in cells
-        start_x = (self.background_width-self.hand_size * self.cell_size)//2
+        start_x = (self.background_width - self.hand_size * self.cell_size) // 2
         for _cell_nr, _cell in enumerate(self.letter_cells):
             _cell.rect.left = start_x + _cell_nr * self.cell_size
-            _cell.rect.top  = self.background_top + self.top_buffer
+            _cell.rect.top = self.background_top + self.top_buffer
             _cell.set_content(PygameText(text=self.letters[_cell_nr],
                                          text_size=self.text_size,
                                          text_color=self.text_color,
@@ -179,5 +226,12 @@ class Hand:
                                          center_y=_cell.rect.centery))
 
     def shuffle_hand(self):
+        # Shuffling letters
         assert len(self.letters) > 0, "No letters on hand."
         random.shuffle(self.letters)
+        for _cell_nr, _cell in enumerate(self.letter_cells):
+            _cell.set_content(PygameText(text=self.letters[_cell_nr],
+                                         text_size=self.text_size,
+                                         text_color=self.text_color,
+                                         center_x=_cell.rect.centerx,
+                                         center_y=_cell.rect.centery))

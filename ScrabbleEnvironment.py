@@ -32,6 +32,11 @@ class Scrabble:
                          background_width=self.screen_width,
                          background_height=200)
 
+        self.shuffle_button = PygameButton(LU_anchor=(20, 610),
+                                           width=70,
+                                           height=40,
+                                           text="Shuffle")
+
         self.is_running = False
 
     def _render(self):
@@ -73,6 +78,15 @@ class Scrabble:
             if self.hand.letter_cells[_letter].is_occupied():
                 self.window_surface.blit(self.hand.letter_cells[_letter].content.text_surface,
                                          self.hand.letter_cells[_letter].content.text_rect)
+
+        # Shuffle button for hand
+        pygame.draw.rect(surface=self.window_surface,
+                         color=self.shuffle_button.color,
+                         rect=self.shuffle_button.rect)
+        # Text on shuffle button
+        self.window_surface.blit(self.shuffle_button.text.text_surface,
+                                 self.shuffle_button.text.text_rect)
+
         # Updating screen and forcing specific framerate
         pygame.display.update()
         self.clock.tick(self.fps)
@@ -82,6 +96,10 @@ class Scrabble:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.is_running = False
+
+        # Checking if shuffle button is pressed
+        if self.shuffle_button.is_pressed():
+            self.hand.shuffle_hand()
 
     def get_state(self):
         pass
@@ -93,3 +111,5 @@ class Scrabble:
             self._handle_input()
             self._render()
         pygame.quit()
+
+
