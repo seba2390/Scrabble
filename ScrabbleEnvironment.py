@@ -32,16 +32,20 @@ class Scrabble:
         # Rendering grid
         for _row in range(self.rows):
             for _col in range(self.columns):
-                # Drawing cell fill
+                # Drawing cell fill color
                 pygame.draw.rect(surface=self.window_surface,
                                  color=self.board.grid[_row][_col].color,
                                  rect=self.board.grid[_row][_col].rect,
                                  width=0)
-                # Drawing cell edge
+                # Drawing cell edge color
                 pygame.draw.rect(surface=self.window_surface,
                                  color=self.board.grid[_row][_col].edge_color,
                                  rect=self.board.grid[_row][_col].rect,
                                  width=1)
+                # Setting text in cell
+                if self.board.grid[_row][_col].is_occupied():
+                    self.window_surface.blit(self.board.grid[_row][_col].content.text_surface,
+                                             self.board.grid[_row][_col].content.text_rect)
 
         # Updating screen and forcing specific framerate
         pygame.display.update()

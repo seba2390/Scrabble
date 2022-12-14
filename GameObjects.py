@@ -1,29 +1,10 @@
-import pygame
-import numpy as np
 import random
 from typing import List, Tuple
 
-MULTIPLIER_TYPES = ["DLS",  # Double letter score
-                    "TLS",  # Triple letter score
-                    "DWS",  # Double word score
-                    "TWS"]  # Triple word score
+import pygame
+import numpy as np
 
-CELL_TYPES = MULTIPLIER_TYPES + ["STANDARD"]
-
-ALPHABET = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
-            "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V",
-            "W", "X", "Y", "Z"]
-
-# Using https://en.wikipedia.org/wiki/Scrabble_letter_distributions
-LETTER_DISTRIBUTION = {
-                       "E": 12, "A": 9, "I": 9, "O": 8, "N": 6, "R": 6, "T": 6, "L": 4, "S": 4, "U": 4,  # 1 point
-                       "D": 4, "G": 3,                                                                   # 2 points
-                       "B": 2, "C": 2, "M": 2, "P": 2,                                                   # 3 points
-                       "F": 2, "H": 2, "V": 2, "W": 2, "Y": 2,                                           # 4 points
-                       "K": 1,                                                                           # 5 points
-                       "J": 1, "X": 1,                                                                   # 8 points
-                       "Q": 1, "Z": 1,                                                                   # 10 points
-                       }
+from Settings import *
 
 
 class Cell:
@@ -41,6 +22,7 @@ class Cell:
 
         self.color = color
         self.edge_color = edge_color
+        self.text_size = 14
         self.type = cell_type
         assert cell_type in CELL_TYPES + ["STANDARD"], f'Type: {self.type} is not known, use any of: {CELL_TYPES}.'
 
@@ -55,12 +37,17 @@ class Cell:
     def is_occupied(self) -> bool:
         return self.occupied
 
-    def set_content(self, letter: str) -> None:
-        self.content = letter
-
     def set_type(self, cell_type: str) -> None:
         assert cell_type in CELL_TYPES, f'Type: {self.type} is not known, use any of: {CELL_TYPES}.'
         self.type = cell_type
+        self.color = MULTIPLIER_COLORS[self.type]
+        if cell_type != "STANDARD":
+            self.occupied = True
+            self.content = PygameText(text=self.type,
+                                      text_size=self.text_size,
+                                      text_color=(255, 255, 255),
+                                      center_x=self.rect.centerx,
+                                      center_y=self.rect.centery)
 
     def get_type(self) -> str:
         return self.type
@@ -86,12 +73,17 @@ class Board:
         self._initialize()
 
     def _initialize(self):
+        # Setting cells in grid
         for _row in range(0, self.nr_rows):
             for _col in range(0, self.nr_cols):
                 _cell = Cell(width=self.cell_width, height=self.cell_height)
                 _cell.rect.left = _col * self.cell_width
                 _cell.rect.top = _row * self.cell_height
                 self.grid[_row][_col] = _cell
+        # Setting type of cells in grid
+        for _multiplier_type in list(MULTIPLIER_ARRANGEMENT.keys()):
+            for _row, _col in MULTIPLIER_ARRANGEMENT[_multiplier_type]:
+                self.grid[_row][_col].set_type(_multiplier_type)
 
 
 class Letters:
@@ -116,3 +108,22 @@ class Letters:
         self.available_letters = self.available_letters[size:]
         return _hand
 
+
+class PygameText:
+    def __init__(self, text: str,
+                 text_size: int,
+                 text_color: Tuple[int, int, int],
+                 center_x: int,
+                 center_y: int) -> None:
+        pygame.font.init()
+
+        self.text_size = text_size
+        self.text_color = text_color
+
+        self.font = pygame.font.Font("media/Scrabble_font.otf", self.text_size)
+
+        self.text_surface = self.font.render(text, True, self.text_color, None)
+
+        self.text_rect = self.text_surface.get_rect()
+
+        self.text_rect.centerx, self.text_rect.centery = center_x, center_y
