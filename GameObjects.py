@@ -6,6 +6,25 @@ import numpy as np
 
 from Settings import *
 
+class PygameText:
+    def __init__(self, text: str,
+                 text_size: int,
+                 text_color: Tuple[int, int, int],
+                 center_x: int,
+                 center_y: int) -> None:
+        pygame.font.init()
+
+        self.text_size = text_size
+        self.text_color = text_color
+
+        self.font = pygame.font.Font("media/Scrabble_font.otf", self.text_size)
+
+        self.text_surface = self.font.render(text, True, self.text_color, None)
+
+        self.text_rect = self.text_surface.get_rect()
+
+        self.text_rect.centerx, self.text_rect.centery = center_x, center_y
+
 
 class Cell:
     def __init__(self, width: int,
@@ -37,17 +56,20 @@ class Cell:
     def is_occupied(self) -> bool:
         return self.occupied
 
+    def set_content(self, content: str | PygameText) -> None:
+        self.occupied = True
+        self.content = content
+
     def set_type(self, cell_type: str) -> None:
         assert cell_type in CELL_TYPES, f'Type: {self.type} is not known, use any of: {CELL_TYPES}.'
         self.type = cell_type
         self.color = MULTIPLIER_COLORS[self.type]
         if cell_type != "STANDARD":
-            self.occupied = True
-            self.content = PygameText(text=self.type,
-                                      text_size=self.text_size,
-                                      text_color=(255, 255, 255),
-                                      center_x=self.rect.centerx,
-                                      center_y=self.rect.centery)
+            self.set_content(PygameText(text=self.type,
+                                        text_size=self.text_size,
+                                        text_color=(255, 255, 255),
+                                        center_x=self.rect.centerx,
+                                        center_y=self.rect.centery))
 
     def get_type(self) -> str:
         return self.type
@@ -100,7 +122,7 @@ class Letters:
             for _nr_letters in range(self._distribution[_letter]):
                 self.available_letters.append(_letter)
 
-    def sample_hand(self, size: int = 7) -> List[int]:
+    def sample(self, size: int = 7) -> List[str]:
         assert size <= len(self.available_letters), f'Not enough letters remaining, wanted size: {size}, \
                                                      remaining letters: {len(self.available_letters)}.'
         random.shuffle(self.available_letters)
@@ -109,21 +131,53 @@ class Letters:
         return _hand
 
 
-class PygameText:
-    def __init__(self, text: str,
-                 text_size: int,
-                 text_color: Tuple[int, int, int],
-                 center_x: int,
-                 center_y: int) -> None:
-        pygame.font.init()
+class Hand:
+    def __init__(self, hand_size: int = 7,
+                 LU_anchor: Tuple[int, int] = (0, 600),  # Placement of left upper (LU) corner on screen.
+                 background_width: int = 600,
+                 background_height: int = 200) -> None:
 
-        self.text_size = text_size
-        self.text_color = text_color
+        self.background_width = background_width
+        self.background_height = background_height
+        self.background_left, self.background_top = LU_anchor
+        self.background_color = (0, 0, 0)
+        self.background_rect = None
+        self.top_buffer = 5 # Distance between top of hand background and top of hand cells
 
-        self.font = pygame.font.Font("media/Scrabble_font.otf", self.text_size)
+        self.cell_size = 50
+        self.text_size = 20
+        self.text_color = (255, 255, 255)
 
-        self.text_surface = self.font.render(text, True, self.text_color, None)
+        self.hand_size = hand_size
+        self.available_letters = Letters(distribution=LETTER_DISTRIBUTION)
+        self.letter_cells = []
+        self.letters = []
 
-        self.text_rect = self.text_surface.get_rect()
+        self._initialize()
 
-        self.text_rect.centerx, self.text_rect.centery = center_x, center_y
+    def _initialize(self):
+        # Setting pygame rectangle
+        self.background_rect = pygame.Rect(0, 0, self.background_width, self.background_height)
+        self.background_rect.top = self.background_top
+        self.background_rect.left = self.background_left
+        # Setting first 'Hand size' letters
+        self.letters = self.available_letters.sample(size=self.hand_size)
+        # Setting hand cells for letters
+        self.letter_cells = [Cell(width=self.cell_size,
+                                  height=self.cell_size,
+                                  edge_color=(255, 255, 255))
+                             for _ in range(self.hand_size)]
+        # Setting text objects in cells
+        start_x = (self.background_width-self.hand_size * self.cell_size)//2
+        for _cell_nr, _cell in enumerate(self.letter_cells):
+            _cell.rect.left = start_x + _cell_nr * self.cell_size
+            _cell.rect.top  = self.background_top + self.top_buffer
+            _cell.set_content(PygameText(text=self.letters[_cell_nr],
+                                         text_size=self.text_size,
+                                         text_color=self.text_color,
+                                         center_x=_cell.rect.centerx,
+                                         center_y=_cell.rect.centery))
+
+    def shuffle_hand(self):
+        assert len(self.letters) > 0, "No letters on hand."
+        random.shuffle(self.letters)
