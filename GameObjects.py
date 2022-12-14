@@ -1,6 +1,7 @@
 import pygame
 import numpy as np
 import random
+from typing import List, Tuple
 
 MULTIPLIER_TYPES = ["DLS",  # Double letter score
                     "TLS",  # Triple letter score
@@ -29,8 +30,8 @@ class Cell:
     def __init__(self, width: int,
                  height: int,
                  cell_type: str = "STANDARD",
-                 color: tuple[int, int, int] = (136, 136, 136),  # Grey as standard
-                 edge_color: tuple[int, int, int] = (0, 0, 0)
+                 color: Tuple[int, int, int] = (136, 136, 136),  # Grey as standard
+                 edge_color: Tuple[int, int, int] = (0, 0, 0)
                  ) -> None:
         self.rect = None
 
@@ -68,7 +69,7 @@ class Cell:
 class Board:
     def __init__(self, nr_rows: int = 15,
                  nr_cols: int = 15,
-                 board_size: tuple[int, int] = (600, 600)) -> None:
+                 board_size: Tuple[int, int] = (600, 600)) -> None:
 
         self.nr_rows = nr_rows
         self.nr_cols = nr_cols
@@ -106,9 +107,8 @@ class Letters:
         for _letter in ALPHABET:
             for _nr_letters in range(self._distribution[_letter]):
                 self.available_letters.append(_letter)
-        random.shuffle(self.available_letters)
 
-    def sample_hand(self, size: int = 7) -> list[int, ...]:
+    def sample_hand(self, size: int = 7) -> List[int]:
         assert size <= len(self.available_letters), f'Not enough letters remaining, wanted size: {size}, \
                                                      remaining letters: {len(self.available_letters)}.'
         random.shuffle(self.available_letters)
