@@ -1,12 +1,10 @@
 import random
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import pygame
 import numpy as np
 
 from Settings import *
-
-# TODO: Fix problem with button is_pressed() gives multiple responses
 
 class PygameText:
     def __init__(self, text: str,
@@ -29,13 +27,13 @@ class PygameText:
 
 
 class PygameButton:
-    def __init__(self, LU_anchor: Tuple[int, int],  # Pixel coordinate for upper left corner
+    def __init__(self, UL_anchor: Tuple[int, int],  # Pixel coordinate for upper left corner
                  width: int,
                  height: int,
                  text: str = None,
                  text_size: int = 15,
                  text_color: Tuple[int, int, int] = (255, 255, 255)) -> None:
-        self.left, self.top = LU_anchor
+        self.left, self.top = UL_anchor
         self.width, self.height = width, height
 
         self._unpressed_color = (120, 120, 120)
@@ -57,7 +55,7 @@ class PygameButton:
         self.rect = pygame.Rect(0, 0, self.width, self.height)
         self.rect.left, self.rect.top = self.left, self.top
 
-    def is_pressed(self):
+    def is_pressed(self, event) -> bool:
         mouse_position = pygame.mouse.get_pos()
         # Within x-range
         if self.rect.left <= mouse_position[0] <= self.rect.right:
@@ -66,9 +64,11 @@ class PygameButton:
                 self.color = self._pressed_color
                 left, middle, right = pygame.mouse.get_pressed()
                 # Left mouse-button pressed
-                if left:
+                if event.type == pygame.MOUSEBUTTONDOWN:
                     return True
-
+            else:
+                self.color = self._unpressed_color
+                return False
         else:
             self.color = self._unpressed_color
             return False
@@ -104,7 +104,7 @@ class Cell:
     def is_occupied(self) -> bool:
         return self.occupied
 
-    def set_content(self, content: str | PygameText) -> None:
+    def set_content(self, content: Union[str, PygameText]) -> None:
         self.occupied = True
         self.content = content
 
@@ -155,7 +155,6 @@ class Board:
             for _row, _col in MULTIPLIER_ARRANGEMENT[_multiplier_type]:
                 self.grid[_row][_col].set_type(_multiplier_type)
 
-
 class Letters:
     def __init__(self, distribution=None):
         if distribution is None:
@@ -181,12 +180,12 @@ class Letters:
 
 class Hand:
     def __init__(self, hand_size: int = 7,
-                 LU_anchor: Tuple[int, int] = (0, 600),  # Placement of left upper (LU) corner on screen.
+                 UL_anchor: Tuple[int, int] = (0, 600),  # Placement of upper left (UL) corner on screen.
                  background_width: int = 600,
                  background_height: int = 200) -> None:
         self.background_width = background_width
         self.background_height = background_height
-        self.background_left, self.background_top = LU_anchor
+        self.background_left, self.background_top = UL_anchor
         self.background_color = (0, 0, 0)
         self.background_rect = None
         self.top_buffer = 5  # Distance between top of hand background and top of hand cells
