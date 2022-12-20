@@ -2,6 +2,7 @@ import pygame
 
 from GameObjects import *
 
+# TODO: Check MOUSEBUTTONDOWN smarter while still updating unpressed color
 
 class Scrabble:
     def __init__(self, seed: int, display_gameplay: bool):
@@ -28,11 +29,11 @@ class Scrabble:
                                        self.screen_width))
 
         self.hand = Hand(hand_size=7,
-                         LU_anchor=(0, 600),  # Pixel coordinate for upper left corner
+                         UL_anchor=(0, 600),  # Pixel coordinate for upper left corner
                          background_width=self.screen_width,
                          background_height=200)
 
-        self.shuffle_button = PygameButton(LU_anchor=(20, 610),
+        self.shuffle_button = PygameButton(UL_anchor=(20, 610),
                                            width=70,
                                            height=40,
                                            text="Shuffle")
@@ -96,10 +97,10 @@ class Scrabble:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.is_running = False
-
-        # Checking if shuffle button is pressed
-        if self.shuffle_button.is_pressed():
-            self.hand.shuffle_hand()
+        
+            # Checking if shuffle button is pressed
+            if self.shuffle_button.is_pressed(event = event):
+                self.hand.shuffle_hand()
 
     def get_state(self):
         pass
