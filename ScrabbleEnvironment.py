@@ -1,8 +1,5 @@
-import pygame
-
 from GameObjects import *
 
-# TODO: Check MOUSEBUTTONDOWN smarter while still updating unpressed color
 
 class Scrabble:
     def __init__(self, seed: int, display_gameplay: bool):
@@ -38,6 +35,11 @@ class Scrabble:
                                            height=40,
                                            text="Shuffle")
 
+        self.submit_button = PygameButton(UL_anchor=(510, 610),
+                                          width=70,
+                                          height=40,
+                                          text="Submit")
+
         self.is_running = False
 
     def _render(self):
@@ -46,35 +48,29 @@ class Scrabble:
         # Rendering grid
         for _row in range(self.rows):
             for _col in range(self.columns):
-                # Drawing cell fill color
-                pygame.draw.rect(surface=self.window_surface,
-                                 color=self.board.grid[_row][_col].color,
-                                 rect=self.board.grid[_row][_col].rect,
-                                 width=0)
-                # Drawing cell edge color
-                pygame.draw.rect(surface=self.window_surface,
-                                 color=self.board.grid[_row][_col].edge_color,
-                                 rect=self.board.grid[_row][_col].rect,
-                                 width=1)
+                # Drawing cell fill color and edge color
+                draw_rect(surface=self.window_surface,
+                          color=self.board.grid[_row][_col].button.get_color(),
+                          rect=self.board.grid[_row][_col].button.rect,
+                          border=1,
+                          border_color=self.board.grid[_row][_col].edge_color)
+
                 # Setting text in cell
                 if self.board.grid[_row][_col].is_occupied():
                     self.window_surface.blit(self.board.grid[_row][_col].content.text_surface,
                                              self.board.grid[_row][_col].content.text_rect)
+
         # Rendering hand
         pygame.draw.rect(surface=self.window_surface,
                          color=self.hand.background_color,
                          rect=self.hand.background_rect)
         for _letter in range(self.hand.hand_size):
-            # Drawing cell fill color
-            pygame.draw.rect(surface=self.window_surface,
-                             color=self.hand.letter_cells[_letter].color,
-                             rect=self.hand.letter_cells[_letter].rect,
-                             width=0)
-            # Drawing cell edge color
-            pygame.draw.rect(surface=self.window_surface,
-                             color=self.hand.letter_cells[_letter].edge_color,
-                             rect=self.hand.letter_cells[_letter].rect,
-                             width=2)
+            # Drawing cell fill color and edge color
+            draw_rect(surface=self.window_surface,
+                      color=self.hand.letter_cells[_letter].button.get_color(),
+                      rect=self.hand.letter_cells[_letter].button.rect,
+                      border=2,
+                      border_color=self.hand.letter_cells[_letter].edge_color)
             # Setting text in cell
             if self.hand.letter_cells[_letter].is_occupied():
                 self.window_surface.blit(self.hand.letter_cells[_letter].content.text_surface,
@@ -82,11 +78,19 @@ class Scrabble:
 
         # Shuffle button for hand
         pygame.draw.rect(surface=self.window_surface,
-                         color=self.shuffle_button.color,
+                         color=self.shuffle_button.get_color(),
                          rect=self.shuffle_button.rect)
         # Text on shuffle button
         self.window_surface.blit(self.shuffle_button.text.text_surface,
                                  self.shuffle_button.text.text_rect)
+
+        # Submit button
+        pygame.draw.rect(surface=self.window_surface,
+                         color=self.submit_button.get_color(),
+                         rect=self.submit_button.rect)
+        # Text on submit button
+        self.window_surface.blit(self.submit_button.text.text_surface,
+                                 self.submit_button.text.text_rect)
 
         # Updating screen and forcing specific framerate
         pygame.display.update()
@@ -99,8 +103,29 @@ class Scrabble:
                 self.is_running = False
         
             # Checking if shuffle button is pressed
-            if self.shuffle_button.is_pressed(event = event):
+            # TODO: Check MOUSEBUTTONDOWN smarter while still updating unpressed color
+            if self.shuffle_button.check_pressed(event=event):
                 self.hand.shuffle_hand()
+
+            # Checking if submit button is pressed
+            if self.submit_button.check_pressed(event=event):
+                # TODO: Add submit button functionality
+                pass
+            # For handling buttons attached to board grid
+            for _row in range(self.board.grid.shape[0]):
+                for _col in range(self.board.grid.shape[1]):
+                    if self.board.grid[_row][_col].button.check_pressed(event=event):
+                        # First un-press all for having only one grid cell chosen at a time
+                        un_press_all(cells=self.board.grid)
+                        # Negating current state for handling "un-pressing" logic
+                        self.board.grid[_row][_col].button.is_pressed = not self.board.grid[_row][_col].button.is_pressed
+
+            # For handling buttons attached to hand cells
+            for _cell in range(len(self.hand.letter_cells)):
+                if self.hand.letter_cells[_cell].button.check_pressed(event=event):
+                    # First un-press all for having only one hand cell chosen at a time
+                    un_press_all(cells=self.hand.letter_cells)
+                    self.hand.letter_cells[_cell].button.is_pressed = not self.hand.letter_cells[_cell].button.is_pressed
 
     def get_state(self):
         pass
