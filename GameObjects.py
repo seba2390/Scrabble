@@ -1,10 +1,6 @@
-import random
-from typing import List, Tuple, Union
-
-import pygame
-import numpy as np
-
 from Settings import *
+from Util import *
+
 
 class PygameText:
     def __init__(self, text: str,
@@ -30,15 +26,24 @@ class PygameButton:
     def __init__(self, UL_anchor: Tuple[int, int],  # Pixel coordinate for upper left corner
                  width: int,
                  height: int,
+                 color: Tuple[int, int, int] = (120, 120, 120),
                  text: str = None,
                  text_size: int = 15,
                  text_color: Tuple[int, int, int] = (255, 255, 255)) -> None:
         self.left, self.top = UL_anchor
         self.width, self.height = width, height
 
-        self._unpressed_color = (120, 120, 120)
-        self._pressed_color = (145, 145, 145)
-        self.color = self._unpressed_color
+        self.color = color
+        self.un_highlighted_color = self.color
+        self.highlighted_color = (self.un_highlighted_color[0] + 25,
+                                  self.un_highlighted_color[1] + 25,
+                                  self.un_highlighted_color[2] + 25)
+
+        self.pressed_color = (self.un_highlighted_color[0] + 45,
+                              self.un_highlighted_color[1] + 45,
+                              self.un_highlighted_color[2] + 45)
+
+        self.is_pressed = False
 
         if text is not None:
             self.text_color = text_color
@@ -55,22 +60,31 @@ class PygameButton:
         self.rect = pygame.Rect(0, 0, self.width, self.height)
         self.rect.left, self.rect.top = self.left, self.top
 
-    def is_pressed(self, event) -> bool:
+    def get_color(self):
+        if self.is_pressed:
+            return self.pressed_color
+        else:
+            return self.color
+
+    def check_pressed(self, event):
+        if self.is_highlighted():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                return True
+        return False
+
+    def is_highlighted(self) -> bool:
         mouse_position = pygame.mouse.get_pos()
         # Within x-range
         if self.rect.left <= mouse_position[0] <= self.rect.right:
             # Within y-range
             if self.rect.top <= mouse_position[1] <= self.rect.bottom:
-                self.color = self._pressed_color
-                left, middle, right = pygame.mouse.get_pressed()
-                # Left mouse-button pressed
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    return True
+                self.color = self.highlighted_color
+                return True
             else:
-                self.color = self._unpressed_color
+                self.color = self.un_highlighted_color
                 return False
         else:
-            self.color = self._unpressed_color
+            self.color = self.un_highlighted_color
             return False
 
 
@@ -79,9 +93,9 @@ class Cell:
                  height: int,
                  cell_type: str = "STANDARD",
                  color: Tuple[int, int, int] = (136, 136, 136),  # Grey as standard
-                 edge_color: Tuple[int, int, int] = (0, 0, 0)
+                 edge_color: Tuple[int, int, int] = (0, 0, 0),
+                 with_button: bool = False,
                  ) -> None:
-        self.rect = None
 
         self.width = width
         self.height = height
@@ -96,10 +110,11 @@ class Cell:
         self.occupied = False
         self.content = None
 
-        self._initialize()
-
-    def _initialize(self):
-        self.rect = pygame.Rect(0, 0, self.width, self.height)
+        self.button = None
+        if with_button:  # Bool for checking if cell has button attached to it
+            self.button = PygameButton(UL_anchor=(0, 0),  # initializing to random spot
+                                       width=self.width,
+                                       height=self.height)
 
     def is_occupied(self) -> bool:
         return self.occupied
@@ -116,8 +131,8 @@ class Cell:
             self.set_content(PygameText(text=self.type,
                                         text_size=self.text_size,
                                         text_color=(255, 255, 255),
-                                        center_x=self.rect.centerx,
-                                        center_y=self.rect.centery))
+                                        center_x=self.button.rect.centerx,
+                                        center_y=self.button.rect.centery))
 
     def get_type(self) -> str:
         return self.type
@@ -146,14 +161,20 @@ class Board:
         # Setting cells in grid
         for _row in range(0, self.nr_rows):
             for _col in range(0, self.nr_cols):
-                _cell = Cell(width=self.cell_width, height=self.cell_height)
-                _cell.rect.left = _col * self.cell_width
-                _cell.rect.top = _row * self.cell_height
-                self.grid[_row][_col] = _cell
+                _cell = Cell(width=self.cell_width, height=self.cell_height, with_button=True)
+                # Setting button on top of cell
+                _cell.button.rect.left = _col * self.cell_width
+                _cell.button.rect.top = _row * self.cell_height
+                self.grid[_row][_col] = _cell  # Setting cell
+
         # Setting type of cells in grid
         for _multiplier_type in list(MULTIPLIER_ARRANGEMENT.keys()):
             for _row, _col in MULTIPLIER_ARRANGEMENT[_multiplier_type]:
                 self.grid[_row][_col].set_type(_multiplier_type)
+                # Updating button color according to cell type
+                self.grid[_row][_col].button.color = self.grid[_row][_col].color
+                self.grid[_row][_col].button.un_highlighted_color = self.grid[_row][_col].color
+
 
 class Letters:
     def __init__(self, distribution=None):
@@ -196,7 +217,7 @@ class Hand:
 
         self.hand_size = hand_size
         self.available_letters = Letters(distribution=LETTER_DISTRIBUTION)
-        self.letter_cells = []
+        self.letter_cells = np.empty(shape=(7,), dtype=object)
         self.letters = []
 
         self._initialize()
@@ -209,20 +230,21 @@ class Hand:
         # Setting first 'Hand size' letters
         self.letters = self.available_letters.sample(size=self.hand_size)
         # Setting hand cells for letters
-        self.letter_cells = [Cell(width=self.cell_size,
-                                  height=self.cell_size,
-                                  edge_color=(255, 255, 255))
-                             for _ in range(self.hand_size)]
+        for _cell in range(len(self.letter_cells)):
+            self.letter_cells[_cell] = Cell(width=self.cell_size,
+                                            height=self.cell_size,
+                                            edge_color=(255, 255, 255),
+                                            with_button=True)
         # Setting text objects in cells
         start_x = (self.background_width - self.hand_size * self.cell_size) // 2
         for _cell_nr, _cell in enumerate(self.letter_cells):
-            _cell.rect.left = start_x + _cell_nr * self.cell_size
-            _cell.rect.top = self.background_top + self.top_buffer
+            _cell.button.rect.left = start_x + _cell_nr * self.cell_size
+            _cell.button.rect.top = self.background_top + self.top_buffer
             _cell.set_content(PygameText(text=self.letters[_cell_nr],
                                          text_size=self.text_size,
                                          text_color=self.text_color,
-                                         center_x=_cell.rect.centerx,
-                                         center_y=_cell.rect.centery))
+                                         center_x=_cell.button.rect.centerx,
+                                         center_y=_cell.button.rect.centery))
 
     def shuffle_hand(self):
         # Shuffling letters
@@ -232,5 +254,5 @@ class Hand:
             _cell.set_content(PygameText(text=self.letters[_cell_nr],
                                          text_size=self.text_size,
                                          text_color=self.text_color,
-                                         center_x=_cell.rect.centerx,
-                                         center_y=_cell.rect.centery))
+                                         center_x=_cell.button.rect.centerx,
+                                         center_y=_cell.button.rect.centery))
