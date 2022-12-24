@@ -1,5 +1,10 @@
+import random
+from typing import List, Tuple, Union
+
+import pygame
+import numpy as np
+
 from Settings import *
-from Util import *
 
 
 class PygameText:
@@ -10,12 +15,13 @@ class PygameText:
                  center_y: int) -> None:
         pygame.font.init()
 
+        self.text = text
         self.text_size = text_size
         self.text_color = text_color
 
         self.font = pygame.font.Font("media/Scrabble_font.otf", self.text_size)
 
-        self.text_surface = self.font.render(text, True, self.text_color, None)
+        self.text_surface = self.font.render(self.text, True, self.text_color, None)
 
         self.text_rect = self.text_surface.get_rect()
 
@@ -29,7 +35,7 @@ class PygameButton:
                  color: Tuple[int, int, int] = (120, 120, 120),
                  text: str = None,
                  text_size: int = 15,
-                 text_color: Tuple[int, int, int] = (255, 255, 255)) -> None:
+                 text_color: Tuple[int, int, int] = WHITE) -> None:
         self.left, self.top = UL_anchor
         self.width, self.height = width, height
 
@@ -93,7 +99,7 @@ class Cell:
                  height: int,
                  cell_type: str = "STANDARD",
                  color: Tuple[int, int, int] = (136, 136, 136),  # Grey as standard
-                 edge_color: Tuple[int, int, int] = (0, 0, 0),
+                 edge_color: Tuple[int, int, int] = BLACK,
                  with_button: bool = False,
                  ) -> None:
 
@@ -123,6 +129,11 @@ class Cell:
         self.occupied = True
         self.content = content
 
+    def remove_content(self) -> None:
+        self.content = None
+        if self.is_occupied():
+            self.occupied = False
+
     def set_type(self, cell_type: str) -> None:
         assert cell_type in CELL_TYPES, f'Type: {self.type} is not known, use any of: {CELL_TYPES}.'
         self.type = cell_type
@@ -130,7 +141,7 @@ class Cell:
         if cell_type != "STANDARD":
             self.set_content(PygameText(text=self.type,
                                         text_size=self.text_size,
-                                        text_color=(255, 255, 255),
+                                        text_color=WHITE,
                                         center_x=self.button.rect.centerx,
                                         center_y=self.button.rect.centery))
 
@@ -233,7 +244,7 @@ class Hand:
         for _cell in range(len(self.letter_cells)):
             self.letter_cells[_cell] = Cell(width=self.cell_size,
                                             height=self.cell_size,
-                                            edge_color=(255, 255, 255),
+                                            edge_color=WHITE,
                                             with_button=True)
         # Setting text objects in cells
         start_x = (self.background_width - self.hand_size * self.cell_size) // 2
@@ -250,9 +261,12 @@ class Hand:
         # Shuffling letters
         assert len(self.letters) > 0, "No letters on hand."
         random.shuffle(self.letters)
+        _letter_counter = 0
         for _cell_nr, _cell in enumerate(self.letter_cells):
-            _cell.set_content(PygameText(text=self.letters[_cell_nr],
-                                         text_size=self.text_size,
-                                         text_color=self.text_color,
-                                         center_x=_cell.button.rect.centerx,
-                                         center_y=_cell.button.rect.centery))
+            if _cell.content is not None:
+                _cell.set_content(PygameText(text=self.letters[_letter_counter],
+                                             text_size=self.text_size,
+                                             text_color=self.text_color,
+                                             center_x=_cell.button.rect.centerx,
+                                             center_y=_cell.button.rect.centery))
+                _letter_counter += 1

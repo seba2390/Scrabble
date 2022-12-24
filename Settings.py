@@ -67,4 +67,7 @@ POINT_DISTRIBUTION = {
                       "K": 5,
                       "J": 8, "X": 8,
                       "Q": 10, "Z": 10,
-                        }
+                    }
+
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
