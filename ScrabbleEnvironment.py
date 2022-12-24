@@ -1,4 +1,5 @@
 from GameObjects import *
+from Util import *
 
 
 class Scrabble:
@@ -64,6 +65,7 @@ class Scrabble:
         pygame.draw.rect(surface=self.window_surface,
                          color=self.hand.background_color,
                          rect=self.hand.background_rect)
+
         for _letter in range(self.hand.hand_size):
             # Drawing cell fill color and edge color
             draw_rect(surface=self.window_surface,
@@ -110,7 +112,18 @@ class Scrabble:
             # Checking if submit button is pressed
             if self.submit_button.check_pressed(event=event):
                 # TODO: Add submit button functionality
-                pass
+
+                for _cell in range(len(self.hand.letter_cells)):
+                    # Only check for pressed board cell if hand cell is pressed
+                    if self.hand.letter_cells[_cell].button.is_pressed:
+                        for _row in range(self.board.grid.shape[0]):
+                            for _col in range(self.board.grid.shape[1]):
+                                # Only setting letter if cell in board is marked
+                                if self.board.grid[_row][_col].button.is_pressed:
+                                    transfer_letter(hand_cell=self.hand.letter_cells[_cell],
+                                                    board_cell=self.board.grid[_row][_col])
+                                    update_hand_contents(hand=self.hand)
+
             # For handling buttons attached to board grid
             for _row in range(self.board.grid.shape[0]):
                 for _col in range(self.board.grid.shape[1]):
