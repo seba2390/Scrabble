@@ -21,7 +21,7 @@ class PygameText:
 
         self.font = pygame.font.Font("media/Scrabble_font.otf", self.text_size)
 
-        self.text_surface = self.font.render(self.text, True, self.text_color, None)
+        self.text_surface = self.font.render(self.text, True, self.text_color)
 
         self.text_rect = self.text_surface.get_rect()
 
@@ -72,6 +72,17 @@ class PygameButton:
         else:
             return self.color
 
+    def set_color(self, color: Tuple[int, int, int]) -> None:
+        self.color = color
+        self.un_highlighted_color = self.color
+        self.highlighted_color = (self.un_highlighted_color[0] + 25,
+                                  self.un_highlighted_color[1] + 25,
+                                  self.un_highlighted_color[2] + 25)
+
+        self.pressed_color = (self.un_highlighted_color[0] + 45,
+                              self.un_highlighted_color[1] + 45,
+                              self.un_highlighted_color[2] + 45)
+
     def check_pressed(self, event):
         if self.is_highlighted():
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -113,6 +124,12 @@ class Cell:
         self.type = cell_type
         assert cell_type in CELL_TYPES + ["STANDARD"], f'Type: {self.type} is not known, use any of: {CELL_TYPES}.'
 
+        self.has_multiplier = False
+        self.multiplier = None
+
+        self.has_score = False
+        self.score = None
+
         self.occupied = False
         self.content = None
 
@@ -125,9 +142,23 @@ class Cell:
     def is_occupied(self) -> bool:
         return self.occupied
 
+    def is_score(self) -> bool:
+        return self.has_score
+
+    def is_multiplier(self) -> bool:
+        return self.has_multiplier
+
     def set_content(self, content: Union[str, PygameText]) -> None:
         self.occupied = True
         self.content = content
+
+    def set_score(self, score: Union[str, PygameText]) -> None:
+        self.has_score = True
+        self.score = score
+
+    def set_multiplier(self, multiplier: Union[str, PygameText]) -> None:
+        self.has_multiplier = True
+        self.multiplier = multiplier
 
     def remove_content(self) -> None:
         self.content = None
@@ -139,11 +170,11 @@ class Cell:
         self.type = cell_type
         self.color = MULTIPLIER_COLORS[self.type]
         if cell_type != "STANDARD":
-            self.set_content(PygameText(text=self.type,
-                                        text_size=self.text_size,
-                                        text_color=WHITE,
-                                        center_x=self.button.rect.centerx,
-                                        center_y=self.button.rect.centery))
+            self.set_multiplier(multiplier=PygameText(text=self.type,
+                                                      text_size=self.text_size,
+                                                      text_color=WHITE,
+                                                      center_x=self.button.rect.centerx,
+                                                      center_y=self.button.rect.centery))
 
     def get_type(self) -> str:
         return self.type
@@ -185,6 +216,21 @@ class Board:
                 # Updating button color according to cell type
                 self.grid[_row][_col].button.color = self.grid[_row][_col].color
                 self.grid[_row][_col].button.un_highlighted_color = self.grid[_row][_col].color
+
+    def get_board_state(self) -> np.ndarray:
+        _EMPTY_TOKEN = "NaN"
+        # Entries of (content, cell type)
+        _board_array = np.empty(shape=(self.nr_rows, self.nr_cols), dtype=object)
+        # Getting cells in grid
+        for _row in range(0, self.nr_rows):
+            for _col in range(0, self.nr_cols):
+                _type = self.grid[_row, _col].get_type()
+                _content = _EMPTY_TOKEN
+                if self.grid[_row, _col].is_occupied():
+                    print(self.grid[_row, _col].content.text)
+                    _content = self.grid[_row, _col].content.text
+                _board_array[_row, _col] = (_content, _type)
+        return _board_array
 
 
 class Letters:
@@ -249,6 +295,7 @@ class Hand:
         # Setting text objects in cells
         start_x = (self.background_width - self.hand_size * self.cell_size) // 2
         for _cell_nr, _cell in enumerate(self.letter_cells):
+            # Setting letter
             _cell.button.rect.left = start_x + _cell_nr * self.cell_size
             _cell.button.rect.top = self.background_top + self.top_buffer
             _cell.set_content(PygameText(text=self.letters[_cell_nr],
@@ -256,6 +303,12 @@ class Hand:
                                          text_color=self.text_color,
                                          center_x=_cell.button.rect.centerx,
                                          center_y=_cell.button.rect.centery))
+            # Setting score val in lower right corner
+            _cell.set_score(PygameText(text=str(POINT_DISTRIBUTION[self.letters[_cell_nr]]),
+                                       text_size=12,  # Three times smaller
+                                       text_color=self.text_color,
+                                       center_x=_cell.button.rect.right - 9,
+                                       center_y=_cell.button.rect.bottom - 9))
 
     def shuffle_hand(self):
         # Shuffling letters

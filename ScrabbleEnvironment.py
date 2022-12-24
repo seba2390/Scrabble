@@ -9,7 +9,7 @@ class Scrabble:
         np.random.seed(self.seed)
         self.display_gameplay = display_gameplay
 
-        self.screen_color = (255, 255, 255)  # white in RGB
+        self.screen_color = WHITE  # white in RGB
         self.display_gameplay = display_gameplay
         self.screen_size = self.screen_width, self.screen_height = 600, 800
         self.grid_size = self.rows, self.columns = 15, 15
@@ -55,44 +55,30 @@ class Scrabble:
                           rect=self.board.grid[_row][_col].button.rect,
                           border=1,
                           border_color=self.board.grid[_row][_col].edge_color)
-
-                # Setting text in cell
-                if self.board.grid[_row][_col].is_occupied():
-                    self.window_surface.blit(self.board.grid[_row][_col].content.text_surface,
-                                             self.board.grid[_row][_col].content.text_rect)
+        # Drawing multiplier text and content text
+        draw_text(surface=self.window_surface, cells=self.board.grid)
 
         # Rendering hand
         pygame.draw.rect(surface=self.window_surface,
                          color=self.hand.background_color,
                          rect=self.hand.background_rect)
 
+        # Drawing cell fill color and edge color
         for _letter in range(self.hand.hand_size):
-            # Drawing cell fill color and edge color
             draw_rect(surface=self.window_surface,
                       color=self.hand.letter_cells[_letter].button.get_color(),
                       rect=self.hand.letter_cells[_letter].button.rect,
                       border=2,
                       border_color=self.hand.letter_cells[_letter].edge_color)
-            # Setting text in cell
-            if self.hand.letter_cells[_letter].is_occupied():
-                self.window_surface.blit(self.hand.letter_cells[_letter].content.text_surface,
-                                         self.hand.letter_cells[_letter].content.text_rect)
 
-        # Shuffle button for hand
-        pygame.draw.rect(surface=self.window_surface,
-                         color=self.shuffle_button.get_color(),
-                         rect=self.shuffle_button.rect)
-        # Text on shuffle button
-        self.window_surface.blit(self.shuffle_button.text.text_surface,
-                                 self.shuffle_button.text.text_rect)
+        # Drawing text in hand cells
+        draw_text(surface=self.window_surface, cells=self.hand.letter_cells)
 
-        # Submit button
-        pygame.draw.rect(surface=self.window_surface,
-                         color=self.submit_button.get_color(),
-                         rect=self.submit_button.rect)
-        # Text on submit button
-        self.window_surface.blit(self.submit_button.text.text_surface,
-                                 self.submit_button.text.text_rect)
+        # Drawing shuffle button
+        draw_button(surface=self.window_surface, button=self.shuffle_button)
+
+        # Drawing submit button
+        draw_button(surface=self.window_surface, button=self.submit_button)
 
         # Updating screen and forcing specific framerate
         pygame.display.update()
@@ -111,8 +97,7 @@ class Scrabble:
 
             # Checking if submit button is pressed
             if self.submit_button.check_pressed(event=event):
-                # TODO: Add submit button functionality
-
+                # TODO: Add scoring functionality
                 for _cell in range(len(self.hand.letter_cells)):
                     # Only check for pressed board cell if hand cell is pressed
                     if self.hand.letter_cells[_cell].button.is_pressed:
