@@ -2,8 +2,6 @@ from GameObjects import *
 from Util import *
 
 
-# TODO: Fix bug where games crashes if hand cell is marked and then two board cells is pressed at once (clicking in between them)
-
 class Scrabble:
     def __init__(self, seed: int, display_gameplay: bool):
 
@@ -50,11 +48,30 @@ class Scrabble:
                                           height=40,
                                           text="Submit")
 
+        self.pass_button = PygameButton(UL_anchor=(510, 610 + self.submit_button.height + 5),
+                                        width=70,
+                                        height=40,
+                                        text="Pass")
+
+        tile_width = 90
+        self.player_one_tile = LabeledTile(UL_anchor=(self.screen_width // 2 - tile_width - 2,
+                                                      self.shuffle_button.rect.bottom + 13),
+                                           width=tile_width,
+                                           height=30,
+                                           text="Player 1")
+        self.player_one_tile.set_highlighted()
+
+        self.player_two_tile = LabeledTile(UL_anchor=(self.screen_width // 2 + 2,
+                                                      self.shuffle_button.rect.bottom + 13),
+                                           width=tile_width,
+                                           height=30,
+                                           text="Player 2")
+
         self.UK_dictionary = Trie()
         self.UK_dictionary.add_strings(strings=get_wordlist())
 
         self.is_running = False
-        self.round = 1
+        self.round = 0
 
     def _render(self):
         # Painting over previous frame
@@ -95,6 +112,13 @@ class Scrabble:
 
         # Drawing submit button
         draw_button(surface=self.window_surface, button=self.submit_button)
+
+        # Drawing pass button
+        draw_button(surface=self.window_surface, button=self.pass_button)
+
+        # Draw Player tiles
+        draw_tile(surface=self.window_surface, tile=self.player_one_tile)
+        draw_tile(surface=self.window_surface, tile=self.player_two_tile)
 
         # Updating screen and forcing specific framerate
         pygame.display.update()
@@ -151,6 +175,12 @@ class Scrabble:
                     if self.hand.letter_cells[_cell].button.check_pressed(event=event):
                         # Always setting pressed and un-pressing others
                         self.hand.set_pressed(coordinate=_cell)
+        if self.round % 2 == 0:
+            self.player_one_tile.set_highlighted()
+            self.player_two_tile.highlighted = False
+        else:
+            self.player_two_tile.set_highlighted()
+            self.player_one_tile.highlighted = False
 
     def get_state(self):
         pass

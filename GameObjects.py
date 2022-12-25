@@ -411,6 +411,47 @@ class Hand:
             self.has_pressed = True
 
 
+class LabeledTile:
+    def __init__(self, UL_anchor: Tuple[int, int],  # Pixel coordinate for upper left corner
+                 width: int,
+                 height: int,
+                 color: Tuple[int, int, int] = GREY,
+                 text: str = None,
+                 text_size: int = 15,
+                 text_color: Tuple[int, int, int] = WHITE) -> None:
+        self.left, self.top = UL_anchor
+        self.width, self.height = width, height
+
+        self.color = color
+        self.highlighted_color = (self.color[0] + 55,
+                                  self.color[1] + 55,
+                                  self.color[2] + 55)
+        self.highlighted = False
+
+        if text is not None:
+            self.text_color = text_color
+            self.text_size = text_size
+            self.text = PygameText(text=text,
+                                   text_size=self.text_size,
+                                   text_color=self.text_color,
+                                   center_x=self.left + self.width // 2,
+                                   center_y=self.top + self.height // 2)
+        self._initialize()
+
+    def _initialize(self):
+        # Setting pygame rectangle
+        self.rect = pygame.Rect(0, 0, self.width, self.height)
+        self.rect.left, self.rect.top = self.left, self.top
+
+    def set_highlighted(self):
+        self.highlighted = True
+
+    def get_color(self):
+        if self.highlighted:
+            return self.highlighted_color
+        return self.color
+
+
 class Play:
     """ Class for handling a play in a round."""
 
@@ -536,9 +577,11 @@ class Play:
 
     def submit(self, round: int, board: Board, dictionary: Trie) -> bool:
         # First word placed doesn't have to be adjacent to other letters
-        if round == 1:
-            if self.same_row(_coordinates=self.board_coordinates) or self.same_column(_coordinates=self.board_coordinates):
-                if self.horizontally_adjacent(_coordinates=self.board_coordinates) or self.vertically_adjacent(_coordinates=self.board_coordinates):
+        if round == 0:
+            if self.same_row(_coordinates=self.board_coordinates) or self.same_column(
+                    _coordinates=self.board_coordinates):
+                if self.horizontally_adjacent(_coordinates=self.board_coordinates) or self.vertically_adjacent(
+                        _coordinates=self.board_coordinates):
                     _placed_word = self.get_word(_board=board, coordinates=self.board_coordinates)
                     print("playing word:", _placed_word)
                     if dictionary.holds(word=_placed_word):
@@ -554,13 +597,14 @@ class Play:
         # All words except first one has to be adjacent to other letters
         else:
             _words = []
-            if self.same_row(_coordinates=self.board_coordinates) or self.same_column(_coordinates=self.board_coordinates):
+            if self.same_row(_coordinates=self.board_coordinates) or self.same_column(
+                    _coordinates=self.board_coordinates):
                 for _row in range(board.grid.shape[0]):
                     _current_words = self.get_words(line=board.grid[_row])
                     for _word in _current_words:
                         _words.append(_word)
                 for _col in range(board.grid.shape[1]):
-                    _current_words = self.get_words(line=board.grid[:,_col])
+                    _current_words = self.get_words(line=board.grid[:, _col])
                     for _word in _current_words:
                         _words.append(_word)
                 for _word in _words:
