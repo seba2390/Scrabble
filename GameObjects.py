@@ -1,5 +1,6 @@
 import random
 from typing import List, Tuple, Union
+from copy import deepcopy
 
 import pygame
 import numpy as np
@@ -7,13 +8,14 @@ import numpy as np
 from Settings import *
 
 
+# TODO: Find a way to make set_pressed(coordinate) method shared for 'Hand' and 'Board' class instead of writing 2 times.
+
 class PygameText:
     def __init__(self, text: str,
                  text_size: int,
                  text_color: Tuple[int, int, int],
                  center_x: int,
                  center_y: int) -> None:
-
         pygame.font.init()
 
         self.text = text
@@ -33,7 +35,7 @@ class PygameButton:
     def __init__(self, UL_anchor: Tuple[int, int],  # Pixel coordinate for upper left corner
                  width: int,
                  height: int,
-                 color: Tuple[int, int, int] = (120, 120, 120),
+                 color: Tuple[int, int, int] = GREY,
                  text: str = None,
                  text_size: int = 15,
                  text_color: Tuple[int, int, int] = WHITE) -> None:
@@ -209,6 +211,9 @@ class Board:
 
         self.grid = np.empty(shape=(self.nr_rows, self.nr_cols), dtype=object)
 
+        self.has_pressed = False  # Bool for checking if any button on board is pressed
+        self.pressed_coord = None  # Tuple of index coordinates of pressed button
+
         self._initialize()
 
     def _initialize(self):
@@ -237,12 +242,29 @@ class Board:
         for _row in range(0, self.nr_rows):
             for _col in range(0, self.nr_cols):
                 _type = self.grid[_row, _col].get_type()
-                _content = _EMPTY_TOKEN
-                if self.grid[_row, _col].is_occupied():
-                    print(self.grid[_row, _col].content.text)
-                    _content = self.grid[_row, _col].content.text
+                _content = self.grid[_row, _col].content.text if self.grid[_row, _col].is_occupied() else _EMPTY_TOKEN
                 _board_array[_row, _col] = (_content, _type)
         return _board_array
+
+    # TODO: fix order w. respect to most commonly occurring
+    def set_pressed(self, coordinate: Tuple[int, int]) -> None:
+        # Same button clicked
+        if self.has_pressed and self.pressed_coord == coordinate:
+            self.grid[coordinate[0], coordinate[1]].button.is_pressed = False
+            self.has_pressed = False
+        # New button pressed while one already pressed
+        elif self.has_pressed and self.pressed_coord != coordinate:
+            # Un-pressing old one
+            self.grid[self.pressed_coord[0], self.pressed_coord[1]].button.is_pressed = False
+            self.pressed_coord = coordinate
+            # Pressing new one
+            self.grid[self.pressed_coord[0], self.pressed_coord[1]].button.is_pressed = True
+            self.has_pressed = True
+        # New button pressed with no one already pressed
+        elif not self.has_pressed:
+            self.pressed_coord = coordinate
+            self.grid[self.pressed_coord[0], self.pressed_coord[1]].button.is_pressed = True
+            self.has_pressed = True
 
 
 class Letters:
@@ -289,6 +311,9 @@ class Hand:
         self.letter_cells = np.empty(shape=(7,), dtype=object)
         self.letters = []
 
+        self.has_pressed = False  # Bool for checking if any button on board is pressed
+        self.pressed_coord = None  # Index coordinate for pressed button
+
         self._initialize()
 
     def _initialize(self):
@@ -317,7 +342,7 @@ class Hand:
                                          center_y=_cell.button.rect.centery))
             # Setting score val in lower right corner
             _cell.set_score(PygameText(text=str(POINT_DISTRIBUTION[self.letters[_cell_nr]]),
-                                       text_size=12,  # Three times smaller
+                                       text_size=12,
                                        text_color=self.text_color,
                                        center_x=_cell.button.rect.right - 9,
                                        center_y=_cell.button.rect.bottom - 9))
@@ -335,3 +360,113 @@ class Hand:
                                              center_x=_cell.button.rect.centerx,
                                              center_y=_cell.button.rect.centery))
                 _letter_counter += 1
+
+    def refill_hand(self):
+        letters_on_hand = sum([1 for _cell in self.letter_cells if _cell.is_occupied()])
+        assert letters_on_hand < self.hand_size, f'Hand is already full.'
+
+        # Sampling new letters
+        new_letters = self.available_letters.sample(size=self.hand_size-letters_on_hand)
+
+        # Filling hand
+        for _cell_nr, _cell in enumerate(self.letter_cells):
+            if not _cell.is_occupied():
+                # Setting letter
+                _letter = new_letters.pop(-1)
+                _cell.set_content(PygameText(text=_letter,
+                                             text_size=self.text_size,
+                                             text_color=self.text_color,
+                                             center_x=_cell.button.rect.centerx,
+                                             center_y=_cell.button.rect.centery))
+                # Setting score val in lower right corner
+                _cell.set_score(PygameText(text=str(POINT_DISTRIBUTION[_letter]),
+                                           text_size=12,
+                                           text_color=self.text_color,
+                                           center_x=_cell.button.rect.right - 9,
+                                           center_y=_cell.button.rect.bottom - 9))
+
+    def set_pressed(self, coordinate: int) -> None:
+        # Same button clicked
+        if self.has_pressed and self.pressed_coord == coordinate:
+            self.letter_cells[coordinate].button.is_pressed = False
+            self.has_pressed = False
+        # New button pressed while one already pressed
+        elif self.has_pressed and self.pressed_coord != coordinate:
+            # Un-pressing old one
+            self.letter_cells[self.pressed_coord].button.is_pressed = False
+            self.pressed_coord = coordinate
+            # Pressing new one
+            self.letter_cells[self.pressed_coord].button.is_pressed = True
+            self.has_pressed = True
+        # New button pressed with no one already pressed
+        elif not self.has_pressed:
+            self.pressed_coord = coordinate
+            self.letter_cells[self.pressed_coord].button.is_pressed = True
+            self.has_pressed = True
+
+
+class Play:
+    """ Class for handling a play in a round."""
+
+    def __init__(self):
+        self.score = 0
+        self.board_coordinates = []  # Index coordinates of played cells on board
+
+    def add_played_cell(self, letter_score: int, board_coordinate: Tuple[int, int]) -> None:
+        assert len(self.board_coordinates) <= 6, 'Should only be able to play a maximum of 7 letters in a round.'
+        self.score += letter_score
+        self.board_coordinates.append(board_coordinate)
+
+    def get_board_coordinates(self) -> np.ndarray:
+        return np.array(self.board_coordinates)
+
+    def get_score(self):
+        return self.score
+
+    def clear_play(self):
+        self.board_coordinates = []
+        self.score = 0
+
+    def return_letters(self, board: Board, hand: Hand):
+        """ Returning played letters from board to hand. """
+
+        cells = [board.grid[coord[0], coord[1]] for coord in self.board_coordinates]
+
+        # Setting in hand
+        for _cell in range(len(hand.letter_cells)):
+            if not hand.letter_cells[_cell].is_occupied():
+                cell = cells.pop(-1)
+                pygame_letter = PygameText(text=cell.content.text,
+                                           text_size=hand.text_size,
+                                           text_color=hand.text_color,
+                                           center_x=hand.letter_cells[_cell].button.rect.centerx,
+                                           center_y=hand.letter_cells[_cell].button.rect.centery)
+                pygame_score = PygameText(text=cell.score.text,
+                                          text_size=12,
+                                          text_color=hand.text_color,
+                                          center_x=hand.letter_cells[_cell].button.rect.right - 9,
+                                          center_y=hand.letter_cells[_cell].button.rect.bottom - 9)
+                hand.letter_cells[_cell].set_content(content=pygame_letter)
+                hand.letter_cells[_cell].set_score(score=pygame_score)
+
+        # Removing from board
+        for _ in range(len(self.board_coordinates)):
+            _row, _col = self.board_coordinates[_]
+            board.grid[_row, _col].remove_content()
+            board.grid[_row, _col].remove_score()
+            # Re-inserting multiplier type text
+            for _multiplier_type, _coordinates in MULTIPLIER_ARRANGEMENT.items():
+                if (_row, _col) in _coordinates:
+                    board.grid[_row][_col].set_type(_multiplier_type)
+                    # Updating button color according to cell type
+                    board.grid[_row][_col].button.color = board.grid[_row][_col].color
+                    board.grid[_row][_col].button.un_highlighted_color = board.grid[_row][_col].color
+
+        self.clear_play()
+
+    def submit(self):
+        self.clear_play()
+
+
+
+

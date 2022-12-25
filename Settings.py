@@ -70,4 +70,5 @@ POINT_DISTRIBUTION = {
                     }
 
 WHITE = (255, 255, 255)
+GREY = (120, 120, 120)
 BLACK = (0, 0, 0)

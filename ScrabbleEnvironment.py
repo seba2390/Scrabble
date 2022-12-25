@@ -2,6 +2,8 @@ from GameObjects import *
 from Util import *
 
 
+# TODO: Fix bug where games crashes if hand cell is marked and then two board cells is pressed at once (clicking in between them)
+
 class Scrabble:
     def __init__(self, seed: int, display_gameplay: bool):
 
@@ -31,12 +33,14 @@ class Scrabble:
                          background_width=self.screen_width,
                          background_height=200)
 
+        self.play = Play()
+
         self.shuffle_button = PygameButton(UL_anchor=(20, 610),
                                            width=70,
                                            height=40,
                                            text="Shuffle")
 
-        self.clear_button = PygameButton(UL_anchor=(20, 610+self.shuffle_button.height+5),
+        self.clear_button = PygameButton(UL_anchor=(20, 610 + self.shuffle_button.height + 5),
                                          width=70,
                                          height=40,
                                          text="Clear")
@@ -97,47 +101,47 @@ class Scrabble:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.is_running = False
-        
+
             # Checking if shuffle button is pressed
             # TODO: Check MOUSEBUTTONDOWN smarter while still updating unpressed color
             if self.shuffle_button.check_pressed(event=event):
                 self.hand.shuffle_hand()
 
             # Checking if clear button is pressed
-            # TODO: Add clear button functionality
             if self.clear_button.check_pressed(event=event):
-                pass
+                # Returning letters from board to hand
+                self.play.return_letters(board=self.board,
+                                         hand=self.hand)
+                update_hand_contents(hand=self.hand)
 
             # Checking if submit button is pressed
             if self.submit_button.check_pressed(event=event):
-                # TODO: Add scoring functionality
-                for _cell in range(len(self.hand.letter_cells)):
-                    # Only check for pressed board cell if hand cell is pressed
-                    if self.hand.letter_cells[_cell].button.is_pressed:
-                        for _row in range(self.board.grid.shape[0]):
-                            for _col in range(self.board.grid.shape[1]):
-                                # Only setting letter if cell in board is marked
-                                if self.board.grid[_row][_col].button.is_pressed:
-                                    transfer_letter(hand_cell=self.hand.letter_cells[_cell],
-                                                    board_cell=self.board.grid[_row][_col])
-                                    update_hand_contents(hand=self.hand)
+                self.play.submit()
+                self.hand.refill_hand()
+                update_hand_contents(hand=self.hand)
 
             # For handling buttons attached to board grid
             for _row in range(self.board.grid.shape[0]):
                 for _col in range(self.board.grid.shape[1]):
                     if self.board.grid[_row][_col].button.check_pressed(event=event):
-                        # First un-press all for having only one grid cell chosen at a time
-                        un_press_all(cells=self.board.grid)
-                        # Negating current state for handling "un-pressing" logic
-                        self.board.grid[_row][_col].button.is_pressed = not self.board.grid[_row][_col].button.is_pressed
+                        # Always setting pressed and un-pressing others
+                        self.board.set_pressed(coordinate=(_row, _col))
+                        # If hand cell was already marked -> move letter from hand to board
+                        if self.hand.has_pressed:
+                            self.play.add_played_cell(
+                                letter_score=int(self.hand.letter_cells[self.hand.pressed_coord].score.text),
+                                board_coordinate=(_row, _col))
+                            transfer_letter(hand_cell=self.hand.letter_cells[self.hand.pressed_coord],
+                                            board_cell=self.board.grid[_row][_col])
+                            update_hand_contents(hand=self.hand)
+                            self.hand.has_pressed = False
 
             # For handling buttons attached to hand cells
             for _cell in range(len(self.hand.letter_cells)):
                 if self.hand.letter_cells[_cell].is_occupied():
                     if self.hand.letter_cells[_cell].button.check_pressed(event=event):
-                        # First un-press all for having only one hand cell chosen at a time
-                        un_press_all(cells=self.hand.letter_cells)
-                        self.hand.letter_cells[_cell].button.is_pressed = not self.hand.letter_cells[_cell].button.is_pressed
+                        # Always setting pressed and un-pressing others
+                        self.hand.set_pressed(coordinate=_cell)
 
     def get_state(self):
         pass
@@ -149,5 +153,3 @@ class Scrabble:
             self._handle_input()
             self._render()
         pygame.quit()
-
-
