@@ -60,18 +60,6 @@ def draw_button(surface: pygame.Surface, button: PygameButton) -> None:
     surface.blit(button.text.text_surface, button.text.text_rect)
 
 
-def un_press_all(cells: np.ndarray):
-    # If passing board, it is 2D array
-    if len(cells.shape) == 2:
-        for row in range(cells.shape[0]):
-            for col in range(cells.shape[1]):
-                cells[row, col].button.is_pressed = False
-    # If passing hand, it is 1D array
-    else:
-        for cell in cells:
-            cell.button.is_pressed = False
-
-
 def transfer_letter(hand_cell: Cell, board_cell: Cell) -> None:
     """ Wrapper function for setting pygame text object in board cell. """
     if hand_cell.is_occupied() and not board_cell.is_occupied():
@@ -104,3 +92,7 @@ def update_hand_contents(hand: Hand) -> None:
     for _cell in range(len(hand.letter_cells)):
         if not hand.letter_cells[_cell].is_occupied():
             hand.letter_cells[_cell].button.set_color(color=BLACK)
+        else:
+            hand.letter_cells[_cell].button.set_color(color=GREY)
+
+
