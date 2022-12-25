@@ -1,4 +1,7 @@
 import os
+from itertools import combinations, permutations
+
+import pygame
 
 from GameObjects import *
 
@@ -48,13 +51,17 @@ def draw_text(surface: pygame.Surface, cells: np.ndarray) -> None:
                              cells[_cell].score.text_rect)
 
 
-def draw_button(surface: pygame.Surface, button: PygameButton) -> None:
+def draw_button(surface: pygame.Surface, button: Union[PygameButton, LabeledTile]) -> None:
     # Button rectangle
     pygame.draw.rect(surface=surface,
                      color=button.get_color(),
                      rect=button.rect)
     # Text on button
     surface.blit(button.text.text_surface, button.text.text_rect)
+
+
+def draw_tile(surface: pygame.Surface, tile: LabeledTile) -> None:
+    draw_button(surface=surface, button=tile)
 
 
 def transfer_letter(hand_cell: Cell, board_cell: Cell) -> None:
@@ -101,4 +108,23 @@ def get_wordlist():
     return _word_list
 
 
+def words_in_dictionary(_string: str, dictionary: Trie) -> List[Tuple[str, int]]:
+    """ Takes all possible subsets of string of size at least 2,
+        finds all permutation of each of these, searches the dictionary
+        and returns a list containing (word, word_score). """
 
+    def word_score(_word: str) -> int:
+        return sum([POINT_DISTRIBUTION[letter] for letter in _word])
+
+    # Getting alle possible k-sized (at least k=2) permutations of string.
+    all_unique_perms = []
+    for _word_length in range(2, len(_string) + 1):
+        combs = list(combinations(_string, r=_word_length))
+        unique_perms = []
+        for comb in combs:
+            if comb not in unique_perms:
+                unique_perms += ["".join(t) for t in list(permutations("".join(comb)))]
+        all_unique_perms += unique_perms
+
+    # Getting the words that are in dictionary
+    return [(_str, word_score(_str)) for _str in all_unique_perms if dictionary.holds(word=_str)]
