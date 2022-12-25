@@ -1,7 +1,4 @@
-from typing import List, Tuple, Union
-
-import pygame
-import numpy as np
+import os
 
 from GameObjects import *
 
@@ -94,5 +91,14 @@ def update_hand_contents(hand: Hand) -> None:
             hand.letter_cells[_cell].button.set_color(color=BLACK)
         else:
             hand.letter_cells[_cell].button.set_color(color=GREY)
+
+
+def get_wordlist():
+    CURRENT_DIR = os.getcwd()
+    WORDLIST_DIR = CURRENT_DIR + "/Algorithm/word lists/"
+    WORDLIST = os.listdir(WORDLIST_DIR)[0]
+    _word_list = np.loadtxt(fname=WORDLIST_DIR + WORDLIST, dtype=str, skiprows=2).tolist()
+    return _word_list
+
 
 

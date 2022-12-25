@@ -50,6 +50,9 @@ class Scrabble:
                                           height=40,
                                           text="Submit")
 
+        self.UK_dictionary = Trie()
+        self.UK_dictionary.add_strings(strings=get_wordlist())
+
         self.is_running = False
 
     def _render(self):
@@ -116,8 +119,12 @@ class Scrabble:
 
             # Checking if submit button is pressed
             if self.submit_button.check_pressed(event=event):
-                self.play.submit()
-                self.hand.refill_hand()
+                # Checking that word exists in dictionary
+                if self.play.submit(board=self.board, dictionary=self.UK_dictionary):
+                    self.hand.refill_hand()
+                else:
+                    self.play.return_letters(board=self.board,
+                                             hand=self.hand)
                 update_hand_contents(hand=self.hand)
 
             # For handling buttons attached to board grid

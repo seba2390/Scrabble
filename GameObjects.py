@@ -1,12 +1,11 @@
 import random
 from typing import List, Tuple, Union
-from copy import deepcopy
 
 import pygame
 import numpy as np
 
 from Settings import *
-
+from Structures import *
 
 # TODO: Find a way to make set_pressed(coordinate) method shared for 'Hand' and 'Board' class instead of writing 2 times.
 
@@ -420,6 +419,7 @@ class Play:
     def get_board_coordinates(self) -> np.ndarray:
         return np.array(self.board_coordinates)
 
+    # TODO: Account for multiplier score 
     def get_score(self):
         return self.score
 
@@ -464,9 +464,52 @@ class Play:
 
         self.clear_play()
 
-    def submit(self):
-        self.clear_play()
+    @staticmethod
+    def valid_row_arrangement(_coordinates: List[Tuple[int, int]]) -> bool:
+        row_0 = _coordinates[0][0]
+        for _coord in _coordinates:
+            if _coord[0] != row_0:
+                return False
+        return True
 
+    @staticmethod
+    def valid_col_arrangement(_coordinates: List[Tuple[int, int]]) -> bool:
+        col_0 = _coordinates[0][1]
+        for _coord in _coordinates:
+            if _coord[1] != col_0:
+                return False
+        return True
 
+    def valid_arrangement(self, coordinates: List[Tuple[int, int]]) -> bool:
+        if self.valid_row_arrangement(_coordinates=coordinates) or self.valid_col_arrangement(_coordinates=coordinates):
+            return True
+        return False
 
+    def get_word(self, _board: Board, coordinates: List[Tuple[int, int]]) -> str:
+        if self.valid_row_arrangement(_coordinates=coordinates):
+            sorted_rows = [coord[0] for coord in coordinates]
+            sorted_coordinates = np.array(coordinates)[np.argsort(sorted_rows)].tolist()
+        else:
+            sorted_cols = [coord[1] for coord in coordinates]
+            sorted_coordinates = np.array(coordinates)[np.argsort(sorted_cols)].tolist()
+        _word = ""
+        for _coord in sorted_coordinates:
+            _row, _col = _coord
+            _word += _board.grid[_row, _col].content.text
+        return _word
+
+    def submit(self, board: Board, dictionary: Trie):
+        if self.valid_arrangement(coordinates=self.board_coordinates):
+            _placed_word = self.get_word(_board=board, coordinates=self.board_coordinates)
+            print("playing word:", _placed_word)
+            if dictionary.holds(word=_placed_word):
+                print("GREAT SUCCESS - WORD EXISTS IN DICTIONARY")
+                self.clear_play()
+                return True
+            else:
+                print("NOT SO GREAT SUCCESS - WORD DOESNT EXIST IN DICTIONARY")
+                return False
+        else:
+            print("INVALID ARRANGEMENT OF LETTERS...")
+            return False
 
