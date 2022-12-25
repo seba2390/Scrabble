@@ -54,6 +54,7 @@ class Scrabble:
         self.UK_dictionary.add_strings(strings=get_wordlist())
 
         self.is_running = False
+        self.round = 1
 
     def _render(self):
         # Painting over previous frame
@@ -120,8 +121,9 @@ class Scrabble:
             # Checking if submit button is pressed
             if self.submit_button.check_pressed(event=event):
                 # Checking that word exists in dictionary
-                if self.play.submit(board=self.board, dictionary=self.UK_dictionary):
+                if self.play.submit(round=self.round, board=self.board, dictionary=self.UK_dictionary):
                     self.hand.refill_hand()
+                    self.round += 1
                 else:
                     self.play.return_letters(board=self.board,
                                              hand=self.hand)

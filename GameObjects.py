@@ -7,6 +7,7 @@ import numpy as np
 from Settings import *
 from Structures import *
 
+
 # TODO: Find a way to make set_pressed(coordinate) method shared for 'Hand' and 'Board' class instead of writing 2 times.
 
 class PygameText:
@@ -358,6 +359,12 @@ class Hand:
                                              text_color=self.text_color,
                                              center_x=_cell.button.rect.centerx,
                                              center_y=_cell.button.rect.centery))
+                # Setting score val in lower right corner
+                _cell.set_score(PygameText(text=str(POINT_DISTRIBUTION[self.letters[_cell_nr]]),
+                                           text_size=12,
+                                           text_color=self.text_color,
+                                           center_x=_cell.button.rect.right - 9,
+                                           center_y=_cell.button.rect.bottom - 9))
                 _letter_counter += 1
 
     def refill_hand(self):
@@ -365,7 +372,7 @@ class Hand:
         assert letters_on_hand < self.hand_size, f'Hand is already full.'
 
         # Sampling new letters
-        new_letters = self.available_letters.sample(size=self.hand_size-letters_on_hand)
+        new_letters = self.available_letters.sample(size=self.hand_size - letters_on_hand)
 
         # Filling hand
         for _cell_nr, _cell in enumerate(self.letter_cells):
@@ -465,28 +472,57 @@ class Play:
         self.clear_play()
 
     @staticmethod
-    def valid_row_arrangement(_coordinates: List[Tuple[int, int]]) -> bool:
-        row_0 = _coordinates[0][0]
-        for _coord in _coordinates:
-            if _coord[0] != row_0:
+    def same_row(_coordinates: List[Tuple[int, int]]) -> bool:
+        _initial = _coordinates[0]
+        # Checking that they are in same row
+        for _count, _coord in enumerate(_coordinates):
+            if _coord[0] != _initial[0]:
                 return False
         return True
 
     @staticmethod
-    def valid_col_arrangement(_coordinates: List[Tuple[int, int]]) -> bool:
-        col_0 = _coordinates[0][1]
-        for _coord in _coordinates:
-            if _coord[1] != col_0:
+    def same_column(_coordinates: List[Tuple[int, int]]) -> bool:
+        _initial = _coordinates[0]
+        # Checking that they are in same col
+        for _count, _coord in enumerate(_coordinates):
+            if _coord[1] != _initial[1]:
                 return False
         return True
 
-    def valid_arrangement(self, coordinates: List[Tuple[int, int]]) -> bool:
-        if self.valid_row_arrangement(_coordinates=coordinates) or self.valid_col_arrangement(_coordinates=coordinates):
-            return True
-        return False
+    @staticmethod
+    def horizontally_adjacent(_coordinates: List[Tuple[int, int]]) -> bool:
+        _initial = _coordinates[0]
+        for _count, _coord in enumerate(_coordinates):
+            if _coord[1] != _initial[1] + _count:
+                return False
+        return True
+
+    @staticmethod
+    def vertically_adjacent(_coordinates: List[Tuple[int, int]]) -> bool:
+        _initial = _coordinates[0]
+        for _count, _coord in enumerate(_coordinates):
+            if _coord[0] != _initial[0] + _count:
+                return False
+        return True
+
+    @staticmethod
+    def get_words(line: np.ndarray) -> List[str]:
+        sequences = []
+        current_sequence = ""
+        for cell in line:
+            if cell.content is not None:
+                current_sequence += cell.content.text
+            elif len(current_sequence) >= 2:
+                sequences.append(current_sequence)
+                current_sequence = ""
+            else:
+                current_sequence = ""
+        if len(current_sequence) >= 2:
+            sequences.append(current_sequence)
+        return sequences
 
     def get_word(self, _board: Board, coordinates: List[Tuple[int, int]]) -> str:
-        if self.valid_row_arrangement(_coordinates=coordinates):
+        if self.same_row(_coordinates=coordinates):
             sorted_rows = [coord[0] for coord in coordinates]
             sorted_coordinates = np.array(coordinates)[np.argsort(sorted_rows)].tolist()
         else:
@@ -498,18 +534,41 @@ class Play:
             _word += _board.grid[_row, _col].content.text
         return _word
 
-    def submit(self, board: Board, dictionary: Trie):
-        if self.valid_arrangement(coordinates=self.board_coordinates):
-            _placed_word = self.get_word(_board=board, coordinates=self.board_coordinates)
-            print("playing word:", _placed_word)
-            if dictionary.holds(word=_placed_word):
-                print("GREAT SUCCESS - WORD EXISTS IN DICTIONARY")
+    def submit(self, round: int, board: Board, dictionary: Trie) -> bool:
+        # First word placed doesn't have to be adjacent to other letters
+        if round == 1:
+            if self.same_row(_coordinates=self.board_coordinates) or self.same_column(_coordinates=self.board_coordinates):
+                if self.horizontally_adjacent(_coordinates=self.board_coordinates) or self.vertically_adjacent(_coordinates=self.board_coordinates):
+                    _placed_word = self.get_word(_board=board, coordinates=self.board_coordinates)
+                    print("playing word:", _placed_word)
+                    if dictionary.holds(word=_placed_word):
+                        print("GREAT SUCCESS - WORD EXISTS IN DICTIONARY")
+                        self.clear_play()
+                        return True
+                    else:
+                        print("NOT SO GREAT SUCCESS - WORD DOESNT EXIST IN DICTIONARY")
+                        return False
+            else:
+                print("INVALID ARRANGEMENT OF LETTERS...")
+                return False
+        # All words except first one has to be adjacent to other letters
+        else:
+            _words = []
+            if self.same_row(_coordinates=self.board_coordinates) or self.same_column(_coordinates=self.board_coordinates):
+                for _row in range(board.grid.shape[0]):
+                    _current_words = self.get_words(line=board.grid[_row])
+                    for _word in _current_words:
+                        _words.append(_word)
+                for _col in range(board.grid.shape[1]):
+                    _current_words = self.get_words(line=board.grid[:,_col])
+                    for _word in _current_words:
+                        _words.append(_word)
+                for _word in _words:
+                    if not dictionary.holds(word=_word):
+                        return False
+                print("Made legal play and found words:", _words)
                 self.clear_play()
                 return True
             else:
-                print("NOT SO GREAT SUCCESS - WORD DOESNT EXIST IN DICTIONARY")
+                print("INVALID ARRANGEMENT OF LETTERS...")
                 return False
-        else:
-            print("INVALID ARRANGEMENT OF LETTERS...")
-            return False
-
