@@ -36,6 +36,11 @@ class Scrabble:
                                            height=40,
                                            text="Shuffle")
 
+        self.clear_button = PygameButton(UL_anchor=(20, 610+self.shuffle_button.height+5),
+                                         width=70,
+                                         height=40,
+                                         text="Clear")
+
         self.submit_button = PygameButton(UL_anchor=(510, 610),
                                           width=70,
                                           height=40,
@@ -77,6 +82,9 @@ class Scrabble:
         # Drawing shuffle button
         draw_button(surface=self.window_surface, button=self.shuffle_button)
 
+        # Drawing clear button
+        draw_button(surface=self.window_surface, button=self.clear_button)
+
         # Drawing submit button
         draw_button(surface=self.window_surface, button=self.submit_button)
 
@@ -94,6 +102,11 @@ class Scrabble:
             # TODO: Check MOUSEBUTTONDOWN smarter while still updating unpressed color
             if self.shuffle_button.check_pressed(event=event):
                 self.hand.shuffle_hand()
+
+            # Checking if clear button is pressed
+            # TODO: Add clear button functionality
+            if self.clear_button.check_pressed(event=event):
+                pass
 
             # Checking if submit button is pressed
             if self.submit_button.check_pressed(event=event):
@@ -120,10 +133,11 @@ class Scrabble:
 
             # For handling buttons attached to hand cells
             for _cell in range(len(self.hand.letter_cells)):
-                if self.hand.letter_cells[_cell].button.check_pressed(event=event):
-                    # First un-press all for having only one hand cell chosen at a time
-                    un_press_all(cells=self.hand.letter_cells)
-                    self.hand.letter_cells[_cell].button.is_pressed = not self.hand.letter_cells[_cell].button.is_pressed
+                if self.hand.letter_cells[_cell].is_occupied():
+                    if self.hand.letter_cells[_cell].button.check_pressed(event=event):
+                        # First un-press all for having only one hand cell chosen at a time
+                        un_press_all(cells=self.hand.letter_cells)
+                        self.hand.letter_cells[_cell].button.is_pressed = not self.hand.letter_cells[_cell].button.is_pressed
 
     def get_state(self):
         pass
