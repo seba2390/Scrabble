@@ -13,6 +13,7 @@ class PygameText:
                  text_color: Tuple[int, int, int],
                  center_x: int,
                  center_y: int) -> None:
+
         pygame.font.init()
 
         self.text = text
@@ -162,8 +163,19 @@ class Cell:
 
     def remove_content(self) -> None:
         self.content = None
+        self.button.is_pressed = False
         if self.is_occupied():
             self.occupied = False
+
+    def remove_score(self) -> None:
+        self.score = None
+        if self.is_score():
+            self.has_score = False
+
+    def remove_multiplier(self) -> None:
+        self.multiplier = None
+        if self.is_multiplier():
+            self.has_multiplier = False
 
     def set_type(self, cell_type: str) -> None:
         assert cell_type in CELL_TYPES, f'Type: {self.type} is not known, use any of: {CELL_TYPES}.'

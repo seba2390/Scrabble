@@ -34,6 +34,10 @@ def draw_text(surface: pygame.Surface, cells: np.ndarray) -> None:
                 if cells[_row][_col].is_occupied():
                     surface.blit(cells[_row][_col].content.text_surface,
                                  cells[_row][_col].content.text_rect)
+                # Setting score val:
+                if cells[_row][_col].is_score():
+                    surface.blit(cells[_row][_col].score.text_surface,
+                                 cells[_row][_col].score.text_rect)
     # 1D array of cells (hand)
     else:
         for _cell in range(len(cells)):
@@ -76,8 +80,17 @@ def transfer_letter(hand_cell: Cell, board_cell: Cell) -> None:
                                    text_color=WHITE,
                                    center_x=board_cell.button.rect.centerx,
                                    center_y=board_cell.button.rect.centery)
+        pygame_score = PygameText(text=hand_cell.score.text,
+                                  text_size=board_cell.text_size // 2 + 1,
+                                  text_color=WHITE,
+                                  center_x=board_cell.button.rect.right - 6,
+                                  center_y=board_cell.button.rect.bottom - 6)
         board_cell.set_content(content=pygame_letter)
+        board_cell.set_score(score=pygame_score)
         hand_cell.remove_content()
+        hand_cell.remove_score()
+        if board_cell.is_multiplier():
+            board_cell.remove_multiplier()
 
 
 def update_hand_contents(hand: Hand) -> None:
